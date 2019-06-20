@@ -1,47 +1,32 @@
 package main
 
 import (
-	"cloud.google.com/go/spanner"
-	"time"
-	"fmt"
-	"net/http"
+	"context"
 	"log"
 	"os"
-	"context"
+	"time"
+
+	"cloud.google.com/go/spanner"
 )
 
 func main() {
-
-	projectID, ok := os.LookupEnv("SPANNER_PROJECT_ID")
+	ctx := context.Background()
+	dsn, ok := os.LookupEnv("SPANNER_DSN")
 	if !ok {
-		log.Fatalf("env not set: SPANNER_PROJECT_ID")
+		log.Fatalf("env: SPANNER_DSN not set")
 	}
-	instanceID, ok := os.LookupEnv("SPANNER_INSTANCE_ID")
-	if !ok {
-		log.Fatalf("env not set: SPANNER_INSTANCE_ID")
+	client, err := spanner.NewClient(ctx, dsn)
+	if err != nil {
+		log.Fatal(err)
 	}
-	databaseID, ok := os.LookupEnv("SPANNER_DATABASE_ID")
-	if !ok {
-		log.Fatalf("env not set: SPANNER_DATABASE_ID")
+	defer client.Close()
+
+	start := time.Now()
+	stmt := spanner.NewStatement("SELECT 1")
+	if err := client.Single().Query(ctx, stmt).Do(func(row *spanner.Row) error {
+		return nil
+	}); err != nil {
+		log.Fatal(err)
 	}
-
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		ctx := context.Background()
-		dsn := fmt.Sprintf("projects/%s/instances/%s/databases/%s", projectID, instanceID, databaseID)
-		client, err := spanner.NewClient(ctx, dsn)
-		if err != nil {
-			panic(err)
-		}
-		defer client.Close()
-
-		start := time.Now()
-		stmt := spanner.NewStatement("SELECT 1")
-		client.Single().Query(ctx, stmt).Do(func(row *spanner.Row) error {
-			return nil
-		})
-		fmt.Fprintf(w, "Query time: %s\n", time.Since(start))
-	})
-
-	log.Fatalln(http.ListenAndServe(":8080", nil))
+	log.Printf("Query time: %s\n", time.Since(start))
 }
-

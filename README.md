@@ -1,10 +1,8 @@
-go + cloud spanner boilerplate
-==================================
+# go + cloud spanner example
+
+### Run on docker
 
 ```sh
-export GOOGLE_APPLICATION_CREDENTIALS=/path/to/key.json
-cp .env.example .env
-vi .env
-docker-compose up -d
-curl http://localhost:8080
+docker build -t go-spanner .
+docker run --rm -v ${GOOGLE_APPLICATION_CREDENTIALS}:/key.json -e GOOGLE_APPLICATION_CREDENTIALS=/key.json -e SPANNER_DSN=projects/xxx/instances/xxx/databases/xxx go-spanner
 ```
